@@ -1,0 +1,134 @@
+name: Dev Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # ===== CODE QUALITY =====
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality Checks
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Black - Check code formatting
+        run: black --check app configs
+
+      - name: isort - Check import sorting
+        run: isort --check-only app configs
+
+      - name: Flake8 - Lint code
+        run: flake8 app configs
+
+      - name: MyPy - Type checking
+        run: mypy app --ignore-missing-imports
+
+      - name: Bandit - Security checks
+        run: bandit -r app -f json -o bandit-report.json || true
+
+  # ===== TESTS =====
+  tests:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: cakto_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/cakto_test
+        run: |
+          python manage.py migrate
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/cakto_test
+        run: |
+          python manage.py test app.api.tests -v 2
+
+      - name: Generate coverage report
+        if: always()
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/cakto_test
+        run: |
+          pip install coverage
+          coverage run --source='app' manage.py test app.api.tests
+          coverage report
+          coverage xml
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  # ===== SUMMARY =====
+  summary:
+    runs-on: ubuntu-latest
+    name: Tests Summary
+    if: always()
+    needs: [code-quality, tests]
+
+    steps:
+      - name: Check code quality status
+        run: |
+          if [ "${{ needs.code-quality.result }}" != "success" ]; then
+            echo "❌ Code quality checks failed"
+            exit 1
+          fi
+
+      - name: Check tests status
+        run: |
+          if [ "${{ needs.tests.result }}" != "success" ]; then
+            echo "❌ Tests failed"
+            exit 1
+          fi
+
+      - name: All checks passed
+        run: echo "✅ All checks passed!"

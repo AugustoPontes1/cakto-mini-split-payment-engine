@@ -1,0 +1,27 @@
+# Django Core
+Django==4.2.11
+djangorestframework==3.14.0
+
+# Database
+psycopg2-binary==2.9.9
+dj-database-url==2.1.0
+
+# Environment & Config
+python-decouple==3.8
+
+# Production Server
+gunicorn==21.2.0
+
+# Utilities
+pytz==2024.1
+
+# Development
+ipython==8.18.1
+ipdb==0.13.13
+django-extensions==3.2.3
+
+# API Documentation
+drf-yasg==1.21.7
+
+# Decimal & Precision
+decimal==0.1  # Already included, but explicit

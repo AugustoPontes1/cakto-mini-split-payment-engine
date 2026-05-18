@@ -1,0 +1,23 @@
+[MASTER]
+init-hook='import sys; sys.path.insert(0, ".")'
+load-plugins=pylint_django,pylint_flask
+django-settings-module=configs.settings
+
+[MESSAGES CONTROL]
+disable=
+    # Too strict for our use case
+    missing-docstring,
+    too-few-public-methods,
+    too-many-arguments,
+    duplicate-code,
+    # Conflicts with Black
+    line-too-long,
+
+[FORMAT]
+max-line-length=120
+
+[DESIGN]
+max-attributes=10
+
+[DJANGO]
+django-models-module=app.api.models

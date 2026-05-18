@@ -1,0 +1,83 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  # ===== BUILD & PUSH IMAGE =====
+  build:
+    runs-on: ubuntu-latest
+    name: Build Docker Image
+    needs: tests
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.stag
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/cakto:stag
+            ${{ secrets.DOCKER_USERNAME }}/cakto:${{ github.sha }}
+
+  # ===== DEPLOY TO STAGING =====
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging (Docker Swarm)
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Staging
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+
+            echo "📦 Pulling latest image..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/cakto:stag
+
+            echo "🚀 Deploying to staging..."
+            cd /opt/cakto
+            docker stack deploy -c docker-compose.stag.yml cakto-stag
+
+            echo "⏳ Waiting for services to be healthy..."
+            sleep 10
+
+            echo "✅ Services status:"
+            docker service ls | grep cakto-stag || true
+
+            echo "📋 Recent logs:"
+            docker service logs cakto-stag_app --tail 20 || true
+
+      - name: Notify deployment
+        if: success()
+        run: echo "✅ Staging deployment successful!"
+
+      - name: Notify failure
+        if: failure()
+        run: echo "❌ Staging deployment failed!"
