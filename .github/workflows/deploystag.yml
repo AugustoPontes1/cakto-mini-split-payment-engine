@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - develop
+    paths-ignore:
+      - '.github/**'
+      - 'README.md'
+      - 'docs/**'
 
 jobs:
   # ===== BUILD & PUSH IMAGE =====
