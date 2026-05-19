@@ -69,9 +69,8 @@ class TestSplitCalculatorPrecision:
             ],
         )
 
-        # 3x = 3.99% + 4% = 7.99%
-        expected_fee = (Decimal("297.00") * Decimal("7.99") / Decimal("100")).quantize(Decimal("0.01"))
-        assert result["platform_fee_amount"] == Decimal("23.70")  # ou similar
+        # 3x = 4.99% + 4% = 8.99%
+        assert result["platform_fee_amount"] == Decimal("26.70")
         assert sum(r["amount"] for r in result["receivables"]) == result["net_amount"]
 
     def test_rounding_one_cent_remainder(self):
