@@ -1,64 +1,63 @@
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework import status
+import json
+from uuid import uuid4
 
 from django.db import transaction
 
-from uuid import uuid4
-import json
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from app.api.models import LedgerEntry, OutboxEvent, Payment
 from app.api.serializers import PaymentRequestSerializer
 from app.services.split_calculator import SplitCalculator
-from app.api.models import Payment, LedgerEntry, OutboxEvent
 
 
 class PaymentCreateView(APIView):
     """
     POST /api/v1/payments
-    
-    Fluxo:
-    1. Validar entrada (serializer)
-    2. Verificar idempotency (retorna 409 se conflito)
-    3. Calcular split (via SplitCalculator)
-    4. Persistir Payment
-    5. Persistir LedgerEntries
-    6. Registrar OutboxEvent
-    7. Retornar response
+
+    Flow:
+    1. Validate input (serializer)
+    2. Check idempotency (return 409 if conflict)
+    3. Calculate split (via SplitCalculator)
+    4. Persist Payment
+    5. Persist LedgerEntries
+    6. Register OutboxEvent
+    7. Return response
     """
-    
+
     def post(self, request):
-        # Step 1: Validar
+        # Step 1: Validate input
         serializer = PaymentRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Step 2: Idempotência
+
+        # Step 2: Idempotency check
         idempotency_key = request.headers.get("Idempotency-Key")
-        
-        existing = Payment.objects.filter(
-            idempotency_key=idempotency_key
-        ).first()
-        
+        if not idempotency_key:
+            return Response({"error": "Idempotency-Key header is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        existing = Payment.objects.filter(idempotency_key=idempotency_key).first()
+
         if existing:
-            # Mesma key + mesmo payload = retornar result anterior
+            # Same key + same payload = return previous result
             if self._payloads_match(request.data, existing.payload):
                 return Response(existing.to_dict(), status=status.HTTP_200_OK)
             else:
-                # Mesma key + payload diferente = CONFLITO
+                # Same key + different payload = CONFLICT
                 return Response(
-                    {"error": "Idempotency conflict: same key, different payload"},
-                    status=status.HTTP_409_CONFLICT
+                    {"error": "Idempotency conflict: same key, different payload"}, status=status.HTTP_409_CONFLICT
                 )
 
-        # Step 3: Calcular
+        # Step 3: Calculate split
         calc_result = SplitCalculator.calculate_with_precision(
             gross_amount=serializer.validated_data["amount"],
             payment_method=serializer.validated_data["payment_method"],
             installments=serializer.validated_data["installments"],
-            splits=serializer.validated_data["splits"]
+            splits=serializer.validated_data["splits"],
         )
 
-        # Step 4-6: Persistir em transação
+        # Step 4-6: Persist in transaction
         with transaction.atomic():
             payment = Payment.objects.create(
                 payment_id=f"pmt_{uuid4()}",
@@ -69,10 +68,10 @@ class PaymentCreateView(APIView):
                 payment_method=serializer.validated_data["payment_method"],
                 installments=serializer.validated_data["installments"],
                 idempotency_key=idempotency_key,
-                payload=request.data,  # Guardar payload original
+                payload=request.data,  # Store original payload
             )
 
-            # Registrar ledger
+            # Register ledger entries
             for receivable in calc_result["receivables"]:
                 LedgerEntry.objects.create(
                     payment=payment,
@@ -81,18 +80,32 @@ class PaymentCreateView(APIView):
                     amount=receivable["amount"],
                 )
 
-            # Registrar evento de auditoria
+            # Register audit event
+            payload = {
+                "gross_amount": str(calc_result["gross_amount"]),
+                "platform_fee_amount": str(calc_result["platform_fee_amount"]),
+                "platform_fee_percent": str(calc_result["platform_fee_percent"]),
+                "net_amount": str(calc_result["net_amount"]),
+                "receivables": [
+                    {
+                        **r,
+                        "percent": str(r["percent"]),
+                        "amount": str(r["amount"]),
+                        "rounding_adjustment": str(r["rounding_adjustment"]),
+                    }
+                    for r in calc_result["receivables"]
+                ],
+            }
             OutboxEvent.objects.create(
                 payment=payment,
                 type="payment_captured",
-                payload=calc_result,  # JSON com cálculo completo
+                payload=payload,
                 status="pending",
             )
 
-        # Step 7: Retornar
+        # Step 7: Return response
         return Response(payment.to_dict(), status=status.HTTP_201_CREATED)
 
     def _payloads_match(self, payload1, payload2):
-        # Comparar semanticamente (não exato, pois Decimal etc)
-        return json.dumps(payload1, sort_keys=True) == \
-               json.dumps(payload2, sort_keys=True)
+        # Semantic comparison (not exact due to Decimal types)
+        return json.dumps(payload1, sort_keys=True) == json.dumps(payload2, sort_keys=True)
