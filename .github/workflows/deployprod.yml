@@ -16,12 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
       - name: Deploy to Production
+        uses: railwayapp/cli-action@v1
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID_PRODUCTION }}
           RAILWAY_ENVIRONMENT: production
-        run: railway up --detach --service cakto-mini-split-engine-prod
+        with:
+          command: up --detach --service cakto-mini-split-engine-prod
