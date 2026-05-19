@@ -3,49 +3,14 @@ name: Deploy to Staging
 on:
   pull_request:
     branches:
-      - develop
+      - development
     types: [closed]
 
 jobs:
-  # ===== CODE QUALITY & TESTS =====
-  test:
-    runs-on: ubuntu-latest
-    name: Tests & Code Quality
-
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_DB: cakto_test
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
   # ===== DEPLOY TO STAGING =====
   deploy-staging:
     runs-on: ubuntu-latest
     name: Deploy to Staging (Railway)
-    needs: test
     if: github.event.pull_request.merged == true
 
     steps:

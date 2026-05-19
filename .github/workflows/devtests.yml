@@ -3,11 +3,11 @@ name: Dev Tests
 on:
   pull_request:
     branches:
-      - develop
+      - development
     types: [opened, synchronize, reopened]
 
 jobs:
-  # ===== CODE QUALITY =====
+  # ===== CODE QUALITY & TESTS =====
   code-quality:
     runs-on: ubuntu-latest
     name: Code Quality Checks
@@ -80,23 +80,6 @@ jobs:
           DATABASE_URL: postgresql://test:test@localhost:5432/cakto_test
         run: |
           python manage.py test app.api.tests -v 2
-
-      - name: Generate coverage report
-        if: always()
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/cakto_test
-        run: |
-          pip install coverage
-          coverage run --source='app' manage.py test app.api.tests
-          coverage report
-          coverage xml
-
-      - name: Upload coverage to Codecov
-        if: always()
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          fail_ci_if_error: false
 
   # ===== SUMMARY =====
   summary:
