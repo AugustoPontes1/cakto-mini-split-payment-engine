@@ -41,7 +41,8 @@ jobs:
             echo "✅ No formatting changes needed"
           else
             echo "📝 Auto-fixing formatting..."
-            git commit -m "style: Auto-format code with Black and isort
+            git commit -m "style: Auto-format code with Black and isort"
+            git push origin HEAD:${{ github.head_ref }}
           fi
 
       - name: Flake8 - Lint code
