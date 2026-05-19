@@ -9,7 +9,7 @@ class TestPaymentCreateView(TestCase):
     def test_successful_payment_creation(self):
         """POST /api/v1/payments com dados válidos retorna 201"""
         response = self.client.post(
-            "/api/v1/payments",
+            "/api/v1/payments/",
             data=json.dumps(
                 {
                     "amount": "297.00",
@@ -43,7 +43,7 @@ class TestPaymentCreateView(TestCase):
         }
 
         response1 = self.client.post(
-            "/api/v1/payments",
+            "/api/v1/payments/",
             data=json.dumps(payload),
             content_type="application/json",
             HTTP_IDEMPOTENCY_KEY="key_abc",
@@ -51,7 +51,7 @@ class TestPaymentCreateView(TestCase):
         payment_id_1 = response1.json()["payment_id"]
 
         response2 = self.client.post(
-            "/api/v1/payments",
+            "/api/v1/payments/",
             data=json.dumps(payload),
             content_type="application/json",
             HTTP_IDEMPOTENCY_KEY="key_abc",
@@ -65,7 +65,7 @@ class TestPaymentCreateView(TestCase):
     def test_idempotency_same_key_different_payload_returns_409(self):
         """Mesma key + payload diferente = retorna 409"""
         self.client.post(
-            "/api/v1/payments",
+            "/api/v1/payments/",
             data=json.dumps(
                 {
                     "amount": "100.00",
@@ -80,7 +80,7 @@ class TestPaymentCreateView(TestCase):
         )
 
         response = self.client.post(
-            "/api/v1/payments",
+            "/api/v1/payments/",
             data=json.dumps(
                 {
                     "amount": "200.00",
