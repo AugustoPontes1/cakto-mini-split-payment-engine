@@ -74,9 +74,9 @@ make test
 
 ## 📡 API Endpoints
 
-### POST /api/v1/payments
+### POST /api/v1/payments (Obrigatório)
 
-Confirmar pagamento com split automático.
+Confirmar pagamento com split automático e gerar ledger + outbox event.
 
 **Headers obrigatórios:**
 - `Content-Type: application/json`
@@ -148,6 +148,48 @@ curl -X POST http://localhost:8000/api/v1/payments \
    - `Idempotency-Key: test-123`
 4. Body tab: selecione **raw** → **JSON** (dropdown)
 5. Cole o JSON acima
+
+### POST /api/v1/checkout/quote (Opcional)
+
+Simula o cálculo de split **sem persistir** nada. Útil para frontend exibir o breakdown de valores.
+
+**Request:** (idêntico ao /payments, mas sem Idempotency-Key)
+```json
+{
+  "amount": "297.00",
+  "currency": "BRL",
+  "payment_method": "card",
+  "installments": 3,
+  "splits": [
+    { "recipient_id": "producer_1", "role": "producer", "percent": 70 },
+    { "recipient_id": "affiliate_9", "role": "affiliate", "percent": 30 }
+  ]
+}
+```
+
+**Response (200 OK):** (sem payment_id, ledger ou outbox)
+```json
+{
+  "gross_amount": "297.00",
+  "platform_fee_amount": "26.70",
+  "platform_fee_percent": "8.99",
+  "net_amount": "270.30",
+  "receivables": [
+    {
+      "recipient_id": "producer_1",
+      "role": "producer",
+      "percent": 70,
+      "amount": "189.21"
+    },
+    {
+      "recipient_id": "affiliate_9",
+      "role": "affiliate",
+      "percent": 30,
+      "amount": "81.09"
+    }
+  ]
+}
+```
 
 ## 💰 Tabela de Taxas
 
@@ -396,6 +438,74 @@ develop-branch (PR → main)
 
 **Importante**: Deploys são acionados por **merge de PR**, não por push direto. Isso garante code review antes de cada deploy.
 
+### 🚂 Deployment no Railway
+
+O deploy automático é feito via **Railway CLI** nos workflows do GitHub Actions.
+
+#### Como Funciona
+
+1. **Ao fazer merge em `develop`**:
+   - Workflow `deploystag.yml` é acionado
+   - Railway CLI executa: `railway up --detach --service cakto-mini-split-engine-stag`
+   - Deploy acontece no ambiente **staging** do Railway
+
+2. **Ao fazer merge em `main`**:
+   - Workflow `deployprod.yml` é acionado
+   - Railway CLI executa: `railway up --detach --service cakto-mini-split-engine-prod`
+   - Deploy acontece no ambiente **production** do Railway
+
+#### Serviços no Railway
+
+**Staging (`RAILWAY_ENVIRONMENT: staging`)**:
+- 🚀 `cakto-mini-split-engine-stag` (aplicação)
+- 🗄️ `Postgres` (banco de dados)
+
+**Production (`RAILWAY_ENVIRONMENT: production`)**:
+- 🚀 `cakto-mini-split-engine-prod` (aplicação com 2 replicas)
+- 🗄️ `Postgres-whtq` (banco de dados)
+
+#### Fluxo de Deploy Visual
+
+```
+feature-branch
+    ↓ (push)
+GitHub (PR criada)
+    ↓ (devtests passam ✅)
+Develop branch (merge)
+    ↓ (webhook acionado)
+deploystag.yml (GitHub Actions)
+    ↓ (railway up --service cakto-mini-split-engine-stag)
+🚀 Railway Staging
+    ↓ (testes manuais)
+main branch (PR criada)
+    ↓ (testes passam ✅)
+main branch (merge)
+    ↓ (webhook acionado)
+deployprod.yml (GitHub Actions)
+    ↓ (railway up --service cakto-mini-split-engine-prod)
+🚀 Railway Production
+```
+
+#### URLs após Deploy
+
+- **Staging**: https://triumphant-energy-staging.up.railway.app
+- **Production**: https://cakto-mini-split-payment-engine-production.up.railway.app
+
+#### Monitorando o Deploy
+
+No GitHub:
+1. Vá para **Actions** no repositório
+2. Procure pelo workflow (`Deploy to Staging` ou `Deploy to Production`)
+3. Clique para ver os logs em tempo real
+4. Veja quando o `railway up --detach` completar com sucesso
+
+No Railway:
+1. Acesse [railway.app](https://railway.app)
+2. Selecione o projeto `cakto-mini-split-payment-engine`
+3. Clique no serviço (`cakto-mini-split-engine-stag` ou `cakto-mini-split-engine-prod`)
+4. Vá para **Deployments** para ver histórico
+5. Monitore logs em **Logs** → **Live**
+
 ### Configuração de Secrets no GitHub
 
 Para que os workflows funcionem, configure no repositório:
@@ -465,23 +575,50 @@ FROM api_ledgerentry
 WHERE payment_id = ?;
 ```
 
-## 🤖 Como usei IA (Claude)
+## 📊 Status da Entrega
 
-**Usadas para**:
-- Rascunho da lógica core do SplitCalculator
-- Listar edge cases de arredondamento
-- Estrutura e padrão de testes
-- Documentação técnica
-- Debug de erros (Decimal JSON, ALLOWED_HOSTS)
-- Infraestrutura (Dockerfile, docker-compose, GitHub Actions)
-- Validações de negócio
+### ✅ Completo
 
-**NÃO usei IA para** (decisões próprias):
-- Arquitetura geral (Decimal, ROUND_DOWN, absorção)
-- Choice de stack (Django + DRF)
-- Estratégia de idempotência (conceito financeiro)
-- Outbox Pattern (padrão de produção)
-- Tabela de taxas e regras de negócio
+- ✅ POST `/api/v1/payments`: endpoint core com validações, split, ledger, outbox
+- ✅ Precision: Decimal + ROUND_DOWN + absorção no primeiro recebedor
+- ✅ Idempotência: header obrigatório, 200 (duplicate) / 409 (conflict)
+- ✅ Ledger: LedgerEntry por recebedor para auditoria
+- ✅ Outbox: OutboxEvent pattern com status pending
+- ✅ Validações: amount, payment_method, installments, splits (1-5), percentuais
+- ✅ Testes: 6+ testes cobrindo precisão, validação, idempotência
+- ✅ Docker: dev/staging/prod com PostgreSQL 15
+- ✅ GitHub Actions: devtests (PR), deploystag (merge develop), deployprod (merge main)
+- ✅ Pre-commit: Black, isort, Flake8
+- ✅ Commits: Conventional Commits com histórico detalhado
+- ✅ PR: Branch feature + merge para homologar
+
+## 🤖 Como usou IA (Claude)
+
+### Usada para:
+1. **Rascunho da lógica core**: Estrutura initial do `SplitCalculator.calculate_with_precision()`
+2. **Edge cases**: Listar e validar cenários de arredondamento (0.01 restante, splits com muitos casas decimais)
+3. **Padrão de testes**: Estrutura pytest/unittest com fixtures e factories
+4. **Documentação**: Explicação de Decimal, ROUND_DOWN, Outbox Pattern
+5. **Debug de erros**: Resolver `Decimal not JSON serializable`, `ALLOWED_HOSTS`, `psycopg3.13`
+6. **Infraestrutura**: Templates de Dockerfile, docker-compose, GitHub Actions
+7. **Validações**: Formular regras de negócio e serializers
+
+### NÃO foi usada IA para (decisões próprias):
+- **Arquitetura geral**: Escolha de Decimal com ROUND_DOWN + absorção (decisão consciente de modelagem)
+- **Stack**: Definição de Django 4.2 + DRF 3.14 (baseado em experiência com fintech)
+- **Estratégia de idempotência**: Regra 409 Conflict + validação de payload (conceito financeiro crítico)
+- **Outbox Pattern**: Decisão de qual formato e schema (padrão de arquitetura, não gerado)
+- **Tabela de taxas**: Valores específicos de 3.99%, 4.99%, 2% por parcela (regra de negócio)
+- **CI/CD**: Decisão de PR-triggered deploys em vez de push-triggered (governance)
+
+### Commits no estilo Conventional Commits:
+```
+feat(api): Add payment endpoint with split and idempotency
+feat(services): Implement SplitCalculator with cent-level precision
+test(split-calc): Add precision and rounding tests
+build(workflows): Configure devtests, staging, and production pipelines
+docs(readme): Document architecture and decision rationale
+```
 
 ## 📂 Estrutura do Projeto
 
@@ -537,11 +674,22 @@ cakto-mini-split-engine/
   # Criar PR contra develop
   ```
 
+## 📝 Submissão para Cakto
+
+**Pull Request**: [Abrir PR aqui](https://github.com/AugustoPontes1/cakto-split-payment-engine/pulls)
+
+Submeta o link do PR aberto para: **rh@cakto.com.br**
+
+Inclua no email:
+- Link do repositório
+- Link da PR principal
+- Qualquer nota sobre decisões arquiteturais ou trade-offs
+
 ## 🏁 Quick Start
 
 ```bash
 # 1. Clonar
-git clone <seu-repo>
+git clone https://github.com/AugustoPontes1/cakto-split-payment-engine.git
 cd cakto-mini-split-engine
 
 # 2. Iniciar Docker (instala DC v2 se needed)
@@ -563,5 +711,4 @@ curl -X POST http://localhost:8000/api/v1/payments \
 ---
 
 **Stack**: Django 4.2 + DRF 3.14 + PostgreSQL 15 + Docker  
-**Desenvolvido**: 2026 para Cakto  
-**Status**: ✅ Pronto para produção
+**Avaliação**: Corretude financeira, Idempotência, Auditoria (Ledger + Outbox), Testes, CI/CD
