@@ -27,5 +27,5 @@ RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Dev server
-EXPOSE 8000
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+EXPOSE 8004
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8004"]

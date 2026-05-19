@@ -1,5 +1,7 @@
 # Cakto Mini Split Engine
 
+<img height="400em" src="https://play-lh.googleusercontent.com/RrKEVOidYnBOkRFbJdN8D_HQs4D9kvnYOt4rfkGF4wsUCg_K2EGhHpJdg3Owa0QdMjLy"/>
+
 Mini engine de pagamentos para infoprodutos com suporte a cálculo de taxas, split de recebíveis, precisão financeira de centavos, idempotência e auditoria via outbox pattern.
 
 ## 🚀 Status
@@ -70,54 +72,6 @@ make migrate
 
 ```bash
 make test
-```
-
-## 🌐 URLs de Deploy (Railway)
-
-**Staging:**
-```
-https://triumphant-energy-staging.up.railway.app
-```
-
-**Production:**
-```
-https://cakto-mini-split-payment-engine-production.up.railway.app
-```
-
-### Exemplo de requisição para Staging
-
-```bash
-curl -X POST https://triumphant-energy-staging.up.railway.app/api/v1/payments \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: test-$(date +%s)" \
-  -d '{
-    "amount": "297.00",
-    "currency": "BRL",
-    "payment_method": "card",
-    "installments": 3,
-    "splits": [
-      {"recipient_id": "p1", "role": "producer", "percent": 70},
-      {"recipient_id": "a1", "role": "affiliate", "percent": 30}
-    ]
-  }'
-```
-
-### Exemplo de requisição para Production
-
-```bash
-curl -X POST https://cakto-mini-split-payment-engine-production.up.railway.app/api/v1/payments \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: test-$(date +%s)" \
-  -d '{
-    "amount": "297.00",
-    "currency": "BRL",
-    "payment_method": "card",
-    "installments": 3,
-    "splits": [
-      {"recipient_id": "p1", "role": "producer", "percent": 70},
-      {"recipient_id": "a1", "role": "affiliate", "percent": 30}
-    ]
-  }'
 ```
 
 ## 📡 API Endpoints
@@ -586,6 +540,40 @@ pre-commit run --all-files
 - 🎨 **Black** 24.3.0: Formatação (line-length=120)
 - 📦 **isort** 5.13.2: Organização de imports (black profile)
 - 🔍 **Flake8** 7.0.0: Linting (max-line-length=120)
+
+## 📋 Pull Requests & Development Flow
+
+Veja o histórico completo de desenvolvimento e testes antes dos deploys:
+
+1. **[PR #21 - Update deployment architecture documentation and fix test workflows](https://github.com/AugustoPontes1/cakto-mini-split-payment-engine/pull/21)**
+   - ✅ Docker Compose services com migrations automáticas
+   - ✅ Formatação Black dos testes
+   - ✅ Correção de SECRET_KEY no settings
+   - ✅ 13/13 testes passando
+
+2. **[PR #22 - Fix test URL trailing slash and test edge cases](https://github.com/AugustoPontes1/cakto-mini-split-payment-engine/pull/22)**
+   - ✅ Correção de trailing slash nas URLs dos testes
+   - ✅ Validação de fee_percent para 12x (26.99%)
+   - ✅ Testes de views funcionando corretamente
+
+3. **[PR #23 - Consolidate environment configuration and add automatic migrations](https://github.com/AugustoPontes1/cakto-mini-split-payment-engine/pull/23)**
+   - ✅ Consolidação de variáveis de ambiente
+   - ✅ Service de migrations em todos os docker-compose
+   - ✅ Migrations executadas automaticamente antes do app iniciar
+   - ✅ Suporte a dev, staging e production
+
+**Fluxo de Testes**:
+```
+feature-branch → PR criada
+    ↓ (devtests executam automaticamente)
+Testes passam? ✅
+    ↓ (merge em develop)
+staging.up.railway.app 🚀
+    ↓ (validação manual)
+PR para main
+    ↓ (testes passam novamente)
+production.up.railway.app 🚀
+```
 
 ## 📊 Métricas para Produção
 
