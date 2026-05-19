@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local environments (Venv)
+env/
+venv/
+.env
+.venv
+
+# Database (keep local DBs out of the image)
+*.sqlite3
+*.db
+
+# Static and Media (should be handled by volumes or S3)
+staticfiles/
+media/
+
+# Git and OS metadata
+.git/
+.gitignore
+.DS_Store
+
+# Docker and CI configuration
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# IDEs and Editors
+.vscode/
+.idea/

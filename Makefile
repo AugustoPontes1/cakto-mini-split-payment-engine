@@ -1,9 +1,12 @@
-.PHONY: help dev test migrate clean down logs
+.PHONY: help dev test migrate clean down logs install-docker-compose
 
 help:
 	@echo "╔════════════════════════════════════════════════════════════╗"
 	@echo "║   Cakto Mini Split Engine - Development Commands           ║"
 	@echo "╚════════════════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "Setup:"
+	@echo "  make install-docker-compose  Install Docker Compose v2"
 	@echo ""
 	@echo "Local Development:"
 	@echo "  make dev              Build and start dev environment"
@@ -39,51 +42,60 @@ help:
 # ===== LOCAL DEVELOPMENT =====
 dev:
 	@echo "🚀 Starting development environment..."
-	docker-compose -f docker-compose.dev.yml up -d
+	docker compose -f docker-compose.dev.yml up -d
 	@echo "✅ Dev environment started!"
 	@echo "📍 API: http://localhost:8000"
 	@echo "💾 DB:  localhost:5432"
 	@sleep 5
-	@docker-compose -f docker-compose.dev.yml logs app | head -20
+	@docker compose -f docker-compose.dev.yml logs app | head -20
+
+# ===== SETUP =====
+install-docker-compose:
+	@echo "📦 Installing Docker Compose v2..."
+	@mkdir -p ~/.docker/cli-plugins
+	@curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-$$(uname -s)-$$(uname -m) -o ~/.docker/cli-plugins/docker-compose
+	@chmod +x ~/.docker/cli-plugins/docker-compose
+	@echo "✅ Docker Compose v2 installed!"
+	@echo "Verify with: docker compose --version"
 
 test:
 	@echo "🧪 Running tests..."
-	docker-compose -f docker-compose.dev.yml exec app python manage.py test app.api.tests -v 2
+	docker compose -f docker-compose.dev.yml exec app python manage.py test app.api.tests -v 2
 
 migrate:
 	@echo "🔄 Running migrations..."
-	docker-compose -f docker-compose.dev.yml exec app python manage.py migrate
+	docker compose -f docker-compose.dev.yml exec app python manage.py migrate
 
 makemigrations:
 	@echo "📝 Creating migrations..."
-	docker-compose -f docker-compose.dev.yml exec app python manage.py makemigrations
+	docker compose -f docker-compose.dev.yml exec app python manage.py makemigrations
 
 shell:
 	@echo "🐚 Opening Django shell..."
-	docker-compose -f docker-compose.dev.yml exec app python manage.py shell
+	docker compose -f docker-compose.dev.yml exec app python manage.py shell
 
 createsuperuser:
 	@echo "👤 Creating superuser..."
-	docker-compose -f docker-compose.dev.yml exec app python manage.py createsuperuser
+	docker compose -f docker-compose.dev.yml exec app python manage.py createsuperuser
 
 # ===== LOGGING =====
 logs:
-	docker-compose -f docker-compose.dev.yml logs -f app
+	docker compose -f docker-compose.dev.yml logs -f app
 
 logs-db:
-	docker-compose -f docker-compose.dev.yml logs -f db
+	docker compose -f docker-compose.dev.yml logs -f db
 
 logs-all:
-	docker-compose -f docker-compose.dev.yml logs -f
+	docker compose -f docker-compose.dev.yml logs -f
 
 # ===== CLEANUP =====
 down:
 	@echo "🛑 Stopping containers..."
-	docker-compose -f docker-compose.dev.yml down
+	docker compose -f docker-compose.dev.yml down
 
 clean:
 	@echo "🗑️  Cleaning up Docker resources..."
-	docker-compose -f docker-compose.dev.yml down -v
+	docker compose -f docker-compose.dev.yml down -v
 	docker stack rm cakto-stag 2>/dev/null || true
 	docker stack rm cakto-prod 2>/dev/null || true
 	@echo "✅ Cleanup complete"
@@ -107,7 +119,7 @@ build-all: build-dev build-stag build-prod
 # ===== VERIFICATION =====
 ps:
 	@echo "🐳 Docker containers:"
-	docker-compose -f docker-compose.dev.yml ps
+	docker compose -f docker-compose.dev.yml ps
 
 health-check:
 	@echo "🏥 Checking health..."
@@ -115,34 +127,34 @@ health-check:
 
 requirements:
 	@echo "📦 Exporting requirements..."
-	docker-compose -f docker-compose.dev.yml exec app pip freeze > requirements.txt
+	docker compose -f docker-compose.dev.yml exec app pip freeze > requirements.txt
 
 # ===== CODE QUALITY =====
 format:
 	@echo "🎨 Formatting code with black and isort..."
-	docker-compose -f docker-compose.dev.yml exec app black app configs
-	docker-compose -f docker-compose.dev.yml exec app isort app configs
+	docker compose -f docker-compose.dev.yml exec app black app configs
+	docker compose -f docker-compose.dev.yml exec app isort app configs
 	@echo "✅ Code formatted"
 
 format-check:
 	@echo "🔍 Checking format without changing..."
-	docker-compose -f docker-compose.dev.yml exec app black --check app configs
-	docker-compose -f docker-compose.dev.yml exec app isort --check-only app configs
+	docker compose -f docker-compose.dev.yml exec app black --check app configs
+	docker compose -f docker-compose.dev.yml exec app isort --check-only app configs
 
 lint:
 	@echo "🔎 Running linters..."
-	docker-compose -f docker-compose.dev.yml exec app flake8 app configs
-	docker-compose -f docker-compose.dev.yml exec app mypy app --ignore-missing-imports
+	docker compose -f docker-compose.dev.yml exec app flake8 app configs
+	docker compose -f docker-compose.dev.yml exec app mypy app --ignore-missing-imports
 	@echo "✅ Linting passed"
 
 pre-commit:
 	@echo "🪝 Running pre-commit hooks..."
-	docker-compose -f docker-compose.dev.yml exec app pre-commit run --all-files
+	docker compose -f docker-compose.dev.yml exec app pre-commit run --all-files
 	@echo "✅ Pre-commit passed"
 
 security:
 	@echo "🔐 Running security checks..."
-	docker-compose -f docker-compose.dev.yml exec app bandit -r app -f json
+	docker compose -f docker-compose.dev.yml exec app bandit -r app -f json
 	@echo "✅ Security check passed"
 
 full-check: format lint security test
