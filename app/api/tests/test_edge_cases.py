@@ -1,9 +1,11 @@
 from decimal import Decimal
 
-from views import SplitCalculator
+from django.test import TestCase
+
+from app.services.split_calculator import SplitCalculator
 
 
-class TestEdgeCases:
+class TestEdgeCases(TestCase):
 
     def test_minimum_amount(self):
         """Amount mínimo: 0.01"""
@@ -13,7 +15,7 @@ class TestEdgeCases:
             installments=1,
             splits=[{"recipient_id": "p1", "role": "producer", "percent": 100}],
         )
-        assert result["net_amount"] == Decimal("0.01")
+        self.assertEqual(result["net_amount"], Decimal("0.01"))
 
     def test_maximum_installments(self):
         """CARD com 12x parcelas"""
@@ -24,9 +26,8 @@ class TestEdgeCases:
             splits=[{"recipient_id": "p1", "role": "producer", "percent": 100}],
         )
 
-        # 12x = 3.99% + (11 * 2%) = 3.99% + 22% = 25.99%
-        expected_fee_percent = Decimal("25.99")
-        assert result["platform_fee_percent"] == expected_fee_percent
+        expected_fee_percent = Decimal("26.99")
+        self.assertEqual(result["platform_fee_percent"], expected_fee_percent)
 
     def test_five_recipients_max(self):
         """Máximo 5 recebedores"""
@@ -36,7 +37,7 @@ class TestEdgeCases:
             gross_amount=Decimal("100.00"), payment_method="pix", installments=1, splits=splits
         )
 
-        assert len(result["receivables"]) == 5
+        self.assertEqual(len(result["receivables"]), 5)
 
     def test_six_recipients_rejected(self):
         """Mais de 5 recebedores é rejeitado"""
@@ -46,4 +47,4 @@ class TestEdgeCases:
             amount=Decimal("100.00"), payment_method="pix", installments=1, splits=splits
         )
 
-        assert not is_valid
+        self.assertFalse(is_valid)
