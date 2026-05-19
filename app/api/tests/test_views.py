@@ -10,16 +10,18 @@ class TestPaymentCreateView(TestCase):
         """POST /api/v1/payments com dados válidos retorna 201"""
         response = self.client.post(
             "/api/v1/payments",
-            data=json.dumps({
-                "amount": "297.00",
-                "currency": "BRL",
-                "payment_method": "card",
-                "installments": 3,
-                "splits": [
-                    {"recipient_id": "p1", "role": "producer", "percent": 70},
-                    {"recipient_id": "a1", "role": "affiliate", "percent": 30},
-                ],
-            }),
+            data=json.dumps(
+                {
+                    "amount": "297.00",
+                    "currency": "BRL",
+                    "payment_method": "card",
+                    "installments": 3,
+                    "splits": [
+                        {"recipient_id": "p1", "role": "producer", "percent": 70},
+                        {"recipient_id": "a1", "role": "affiliate", "percent": 30},
+                    ],
+                }
+            ),
             content_type="application/json",
             HTTP_IDEMPOTENCY_KEY="key123",
         )
@@ -64,26 +66,30 @@ class TestPaymentCreateView(TestCase):
         """Mesma key + payload diferente = retorna 409"""
         self.client.post(
             "/api/v1/payments",
-            data=json.dumps({
-                "amount": "100.00",
-                "currency": "BRL",
-                "payment_method": "pix",
-                "installments": 1,
-                "splits": [{"recipient_id": "p1", "role": "producer", "percent": 100}],
-            }),
+            data=json.dumps(
+                {
+                    "amount": "100.00",
+                    "currency": "BRL",
+                    "payment_method": "pix",
+                    "installments": 1,
+                    "splits": [{"recipient_id": "p1", "role": "producer", "percent": 100}],
+                }
+            ),
             content_type="application/json",
             HTTP_IDEMPOTENCY_KEY="key_xyz",
         )
 
         response = self.client.post(
             "/api/v1/payments",
-            data=json.dumps({
-                "amount": "200.00",
-                "currency": "BRL",
-                "payment_method": "pix",
-                "installments": 1,
-                "splits": [{"recipient_id": "p1", "role": "producer", "percent": 100}],
-            }),
+            data=json.dumps(
+                {
+                    "amount": "200.00",
+                    "currency": "BRL",
+                    "payment_method": "pix",
+                    "installments": 1,
+                    "splits": [{"recipient_id": "p1", "role": "producer", "percent": 100}],
+                }
+            ),
             content_type="application/json",
             HTTP_IDEMPOTENCY_KEY="key_xyz",
         )
