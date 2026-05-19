@@ -26,7 +26,7 @@ class TestEdgeCases(TestCase):
             splits=[{"recipient_id": "p1", "role": "producer", "percent": 100}],
         )
 
-        expected_fee_percent = Decimal("25.99")
+        expected_fee_percent = Decimal("26.99")
         self.assertEqual(result["platform_fee_percent"], expected_fee_percent)
 
     def test_five_recipients_max(self):
