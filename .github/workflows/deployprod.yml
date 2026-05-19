@@ -26,4 +26,3 @@ jobs:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID_PRODUCTION }}
           RAILWAY_ENVIRONMENT: production
         run: railway up
-

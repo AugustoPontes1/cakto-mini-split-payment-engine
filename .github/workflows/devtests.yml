@@ -26,11 +26,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Black - Check code formatting
-        run: black --check app configs
+      - name: Black - Auto-format code
+        run: black app configs
 
-      - name: isort - Check import sorting
-        run: isort --check-only app configs
+      - name: isort - Auto-sort imports
+        run: isort app configs
+
+      - name: Auto-commit formatting changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "✅ No formatting changes needed"
+          else
+            echo "📝 Auto-fixing formatting..."
+            git commit -m "style: Auto-format code with Black and isort
+          fi
 
       - name: Flake8 - Lint code
         run: flake8 app configs
