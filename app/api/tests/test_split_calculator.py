@@ -1,9 +1,11 @@
 from decimal import Decimal
 
+from django.test import TestCase
+
 from app.services.split_calculator import SplitCalculator
 
 
-class TestSplitCalculatorValidation:
+class TestSplitCalculatorValidation(TestCase):
     """Testes de validação de entrada"""
 
     def test_negative_amount_rejected(self):
@@ -13,8 +15,8 @@ class TestSplitCalculatorValidation:
             installments=1,
             splits=[{"recipient_id": "p1", "role": "producer", "percent": 100}],
         )
-        assert not is_valid
-        assert "amount must be > 0" in error
+        self.assertFalse(is_valid)
+        self.assertIn("amount must be > 0", error)
 
     def test_pix_rejects_installments(self):
         is_valid, error = SplitCalculator.validate_input(
@@ -23,8 +25,8 @@ class TestSplitCalculatorValidation:
             installments=2,
             splits=[{"recipient_id": "p1", "role": "producer", "percent": 100}],
         )
-        assert not is_valid
-        assert "pix does not support installments" in error
+        self.assertFalse(is_valid)
+        self.assertIn("pix does not support installments", error)
 
     def test_splits_must_sum_100(self):
         is_valid, error = SplitCalculator.validate_input(
@@ -36,11 +38,11 @@ class TestSplitCalculatorValidation:
                 {"recipient_id": "a1", "role": "affiliate", "percent": 35},
             ],
         )
-        assert not is_valid
-        assert "sum to 100" in error
+        self.assertFalse(is_valid)
+        self.assertIn("sum to 100", error)
 
 
-class TestSplitCalculatorPrecision:
+class TestSplitCalculatorPrecision(TestCase):
     """Testes de precisão de centavos"""
 
     def test_pix_zero_fee_100_percent_split(self):
@@ -52,10 +54,10 @@ class TestSplitCalculatorPrecision:
             splits=[{"recipient_id": "p1", "role": "producer", "percent": 100}],
         )
 
-        assert result["platform_fee_amount"] == Decimal("0.00")
-        assert result["net_amount"] == Decimal("100.00")
-        assert result["receivables"][0]["amount"] == Decimal("100.00")
-        assert sum(r["amount"] for r in result["receivables"]) == result["net_amount"]
+        self.assertEqual(result["platform_fee_amount"], Decimal("0.00"))
+        self.assertEqual(result["net_amount"], Decimal("100.00"))
+        self.assertEqual(result["receivables"][0]["amount"], Decimal("100.00"))
+        self.assertEqual(sum(r["amount"] for r in result["receivables"]), result["net_amount"])
 
     def test_card_3x_70_30_split(self):
         """CARD 3x, split 70/30, soma receivables = net"""
@@ -69,13 +71,11 @@ class TestSplitCalculatorPrecision:
             ],
         )
 
-        # 3x = 4.99% + 4% = 8.99%
-        assert result["platform_fee_amount"] == Decimal("26.70")
-        assert sum(r["amount"] for r in result["receivables"]) == result["net_amount"]
+        self.assertEqual(result["platform_fee_amount"], Decimal("26.70"))
+        self.assertEqual(sum(r["amount"] for r in result["receivables"]), result["net_amount"])
 
     def test_rounding_one_cent_remainder(self):
         """Caso onde sobra 0.01 ao distribuir - deve absorver no primeiro"""
-        # Amount que causa arredondamento
         result = SplitCalculator.calculate_with_precision(
             gross_amount=Decimal("100.00"),
             payment_method="pix",
@@ -87,9 +87,6 @@ class TestSplitCalculatorPrecision:
             ],
         )
 
-        # Invariante: soma == net
         total = sum(r["amount"] for r in result["receivables"])
-        assert total == result["net_amount"]
-
-        # Nenhum centavo perdido
-        assert total == Decimal("100.00")
+        self.assertEqual(total, result["net_amount"])
+        self.assertEqual(total, Decimal("100.00"))
