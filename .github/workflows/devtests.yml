@@ -3,7 +3,7 @@ name: Dev Tests
 on:
   pull_request:
     branches:
-      - develop
+      - development
     types: [opened, synchronize, reopened]
 
 jobs:
