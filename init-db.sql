@@ -1,5 +1,5 @@
 -- Cria o banco de dados de desenvolvimento
-CREATE DATABASE cakto_dev;
+CREATE DATABASE IF NOT EXISTS cakto_dev;
 
 -- Cria o banco de dados de testes
-CREATE DATABASE cakto_test;
+CREATE DATABASE IF NOT EXISTS cakto_test;
