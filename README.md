@@ -72,6 +72,54 @@ make migrate
 make test
 ```
 
+## 🌐 URLs de Deploy (Railway)
+
+**Staging:**
+```
+https://triumphant-energy-staging.up.railway.app
+```
+
+**Production:**
+```
+https://cakto-mini-split-payment-engine-production.up.railway.app
+```
+
+### Exemplo de requisição para Staging
+
+```bash
+curl -X POST https://triumphant-energy-staging.up.railway.app/api/v1/payments \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: test-$(date +%s)" \
+  -d '{
+    "amount": "297.00",
+    "currency": "BRL",
+    "payment_method": "card",
+    "installments": 3,
+    "splits": [
+      {"recipient_id": "p1", "role": "producer", "percent": 70},
+      {"recipient_id": "a1", "role": "affiliate", "percent": 30}
+    ]
+  }'
+```
+
+### Exemplo de requisição para Production
+
+```bash
+curl -X POST https://cakto-mini-split-payment-engine-production.up.railway.app/api/v1/payments \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: test-$(date +%s)" \
+  -d '{
+    "amount": "297.00",
+    "currency": "BRL",
+    "payment_method": "card",
+    "installments": 3,
+    "splits": [
+      {"recipient_id": "p1", "role": "producer", "percent": 70},
+      {"recipient_id": "a1", "role": "affiliate", "percent": 30}
+    ]
+  }'
+```
+
 ## 📡 API Endpoints
 
 ### POST /api/v1/payments
