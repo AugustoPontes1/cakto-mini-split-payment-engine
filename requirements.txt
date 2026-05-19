@@ -2,8 +2,8 @@
 Django==4.2.11
 djangorestframework==3.14.0
 
-# Database
-psycopg2-binary==2.9.9
+# Database (psycopg v3 - melhor suporte a Python 3.13)
+psycopg[binary]==3.2.13
 dj-database-url==2.1.0
 
 # Environment & Config
@@ -23,5 +23,9 @@ django-extensions==3.2.3
 # API Documentation
 drf-yasg==1.21.7
 
-# Decimal & Precision
-decimal==0.1  # Already included, but explicit
+# Code Quality (Pre-commit)
+black==24.3.0
+isort==5.13.2
+flake8==7.0.0
+mypy==1.10.0
+bandit==1.7.5

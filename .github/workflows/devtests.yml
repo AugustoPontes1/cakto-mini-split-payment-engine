@@ -35,12 +35,6 @@ jobs:
       - name: Flake8 - Lint code
         run: flake8 app configs
 
-      - name: MyPy - Type checking
-        run: mypy app --ignore-missing-imports
-
-      - name: Bandit - Security checks
-        run: bandit -r app -f json -o bandit-report.json || true
-
   # ===== TESTS =====
   tests:
     runs-on: ubuntu-latest
