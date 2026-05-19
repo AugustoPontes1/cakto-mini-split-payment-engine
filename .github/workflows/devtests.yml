@@ -7,7 +7,7 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  # ===== CODE QUALITY =====
+  # ===== CODE QUALITY & TESTS =====
   code-quality:
     runs-on: ubuntu-latest
     name: Code Quality Checks
@@ -26,24 +26,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Black - Auto-format code
-        run: black app configs
+      - name: Black - Check code formatting
+        run: black --check app configs
 
-      - name: isort - Auto-sort imports
-        run: isort app configs
-
-      - name: Auto-commit formatting changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if git diff --cached --quiet; then
-            echo "✅ No formatting changes needed"
-          else
-            echo "📝 Auto-fixing formatting..."
-            git commit -m "style: Auto-format code with Black and isort"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
+      - name: isort - Check import sorting
+        run: isort --check-only app configs
 
       - name: Flake8 - Lint code
         run: flake8 app configs
@@ -93,23 +80,6 @@ jobs:
           DATABASE_URL: postgresql://test:test@localhost:5432/cakto_test
         run: |
           python manage.py test app.api.tests -v 2
-
-      - name: Generate coverage report
-        if: always()
-        env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/cakto_test
-        run: |
-          pip install coverage
-          coverage run --source='app' manage.py test app.api.tests
-          coverage report
-          coverage xml
-
-      - name: Upload coverage to Codecov
-        if: always()
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          fail_ci_if_error: false
 
   # ===== SUMMARY =====
   summary:

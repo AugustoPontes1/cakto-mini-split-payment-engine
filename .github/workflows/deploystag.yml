@@ -11,7 +11,6 @@ jobs:
   deploy-staging:
     runs-on: ubuntu-latest
     name: Deploy to Staging (Railway)
-    needs: test
     if: github.event.pull_request.merged == true
 
     steps:
