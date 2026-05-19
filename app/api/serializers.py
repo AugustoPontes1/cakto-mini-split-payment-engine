@@ -1,5 +1,6 @@
-from rest_framework import serializers
 from decimal import Decimal
+
+from rest_framework import serializers
 
 
 class SplitItemSerializer(serializers.Serializer):
@@ -14,16 +15,16 @@ class PaymentRequestSerializer(serializers.Serializer):
     payment_method = serializers.ChoiceField(choices=["pix", "card"])
     installments = serializers.IntegerField(default=1)
     splits = SplitItemSerializer(many=True)
-    
+
     def validate(self, data):
         """Validação de negócio após formato validado"""
         from app.services.split_calculator import SplitCalculator
-        
+
         is_valid, error = SplitCalculator.validate_input(
             amount=Decimal(str(data["amount"])),
             payment_method=data["payment_method"],
             installments=data["installments"],
-            splits=data["splits"]
+            splits=data["splits"],
         )
 
         if not is_valid:
