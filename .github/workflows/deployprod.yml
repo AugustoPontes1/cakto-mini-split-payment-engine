@@ -24,4 +24,4 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID_PRODUCTION }}
           RAILWAY_ENVIRONMENT: production
-        run: railway up --detach
+        run: railway up --detach --service cakto-mini-split-engine-prod
