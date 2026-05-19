@@ -3,13 +3,14 @@ services:
     image: postgres:15-alpine
     container_name: cakto-db-dev
     environment:
-      POSTGRES_DB: cakto
-      POSTGRES_USER: dev
-      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "dev"]
       interval: 2s
@@ -23,18 +24,18 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     container_name: cakto-app-dev
-    command: python manage.py runserver 0.0.0.0:${PORT:-8000}
+    command: python manage.py runserver 0.0.0.0:${PORT:-8004}
     ports:
-      - "${PORT:-8000}:${PORT:-8000}"
+      - "${PORT:-8004}:${PORT:-8004}"
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DEBUG: "true"
-      SECRET_KEY: "dev-secret-key-change-in-production"
-      DATABASE_URL: postgresql://dev:dev@db:5432/cakto
-      ALLOWED_HOSTS: "localhost,127.0.0.1"
-      PORT: ${PORT:-8000}
+      DEBUG: ${DEBUG}
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      PORT: ${PORT:-8004}
     volumes:
       - .:/app
     networks:
