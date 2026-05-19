@@ -24,4 +24,4 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID_STAGING }}
           RAILWAY_ENVIRONMENT: staging
-        run: railway up --service cakto-mini-split-payment-engine
+        run: railway up --detach
