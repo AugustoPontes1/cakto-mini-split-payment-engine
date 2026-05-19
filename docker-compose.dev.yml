@@ -19,17 +19,37 @@ services:
     networks:
       - cakto-dev
 
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: cakto-migrate-dev
+    command: python manage.py migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DEBUG: ${DEBUG}
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+    volumes:
+      - .:/app
+    networks:
+      - cakto-dev
+
   app:
     build:
       context: .
       dockerfile: Dockerfile.dev
     container_name: cakto-app-dev
-    command: python manage.py runserver 0.0.0.0:${PORT:-8004}
     ports:
       - "${PORT:-8004}:${PORT:-8004}"
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       DEBUG: ${DEBUG}
       SECRET_KEY: ${SECRET_KEY}
