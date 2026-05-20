@@ -710,17 +710,6 @@ cakto-mini-split-engine/
   # Criar PR contra develop
   ```
 
-## 📝 Submissão para Cakto
-
-**Pull Request**: [Abrir PR aqui](https://github.com/AugustoPontes1/cakto-split-payment-engine/pulls)
-
-Submeta o link do PR aberto para: **rh@cakto.com.br**
-
-Inclua no email:
-- Link do repositório
-- Link da PR principal
-- Qualquer nota sobre decisões arquiteturais ou trade-offs
-
 ## 🏁 Quick Start
 
 ```bash
